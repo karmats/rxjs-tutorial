@@ -1,22 +1,34 @@
 import { Observable, fromEvent } from "rxjs";
-import { map, filter, delay } from "rxjs/operators";
+import { map, filter, delay, flatMap } from "rxjs/operators";
 
-const circle = document.getElementById("circle");
+const output = document.getElementById("output");
+const button = document.getElementById("button");
 
-const source = fromEvent(document, "mousemove");
+const click = fromEvent(button, "click");
 
-function onNext(value) {
-  circle.style.left = value.x;
-  circle.style.top = value.y;
+function load(url: string) {
+  return Observable.create(observer => {
+    const xhr = new XMLHttpRequest();
+    xhr.addEventListener("load", () => {
+      const data = JSON.parse(xhr.responseText);
+      observer.next(data);
+      observer.complete();
+    });
+    xhr.open("GET", url);
+    xhr.send();
+  });
 }
-source
-  .pipe(
-    map((e: MouseEvent) => ({ x: e.clientX, y: e.clientY })),
-    filter(value => value.x < 500),
-    delay(300)
-  )
-  .subscribe(
-    onNext,
-    e => console.log(`error: ${e}`),
-    () => console.log("complete")
-  );
+
+function renderMovies(movies: any) {
+  movies.forEach(m => {
+    const div = document.createElement("div");
+    div.innerText = m.title;
+    output.appendChild(div);
+  });
+}
+
+click.pipe(flatMap(() => load("movies.json"))).subscribe(
+  renderMovies,
+  e => console.log(`error: ${e}`),
+  () => console.log("complete")
+);
