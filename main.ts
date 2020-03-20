@@ -1,35 +1,29 @@
-import { Observable, fromEvent } from "rxjs";
-import {
-  map,
-  filter,
-  delay,
-  flatMap,
-  retryWhen,
-  scan,
-  takeWhile
-} from "rxjs/operators";
+import { fromEvent, from, of, merge, throwError } from "rxjs";
+import { flatMap, catchError } from "rxjs/operators";
+import { loadWithFetch } from "./loader";
+
+let source = merge(
+  of(1),
+  from([2, 3, 4]),
+  throwError(new Error("Stop")),
+  of(5)
+).pipe(
+  catchError(e => {
+    console.log(`caught ${e}`);
+    return of(10);
+  })
+);
+
+source.subscribe(
+  value => console.log(`value ${value}`),
+  error => console.log(`error ${error}`),
+  () => console.log("complete")
+);
 
 const output = document.getElementById("output");
 const button = document.getElementById("button");
 
 const click = fromEvent(button, "click");
-
-function load(url: string) {
-  return Observable.create(observer => {
-    const xhr = new XMLHttpRequest();
-    xhr.addEventListener("load", () => {
-      if (xhr.status === 200) {
-        const data = JSON.parse(xhr.responseText);
-        observer.next(data);
-        observer.complete();
-      } else {
-        observer.error(xhr.statusText);
-      }
-    });
-    xhr.open("GET", url);
-    xhr.send();
-  }).pipe(retryWhen(retryStrategy({ attempts: 2, wait: 2000 })));
-}
 
 function renderMovies(movies: any) {
   movies.forEach(m => {
@@ -39,20 +33,7 @@ function renderMovies(movies: any) {
   });
 }
 
-function retryStrategy({ attempts = 5, wait = 1000 }) {
-  return function(errors) {
-    return errors.pipe(
-      scan((acc, value: number) => {
-        console.log(acc, value);
-        return acc + 1;
-      }, 0),
-      takeWhile(acc => acc < attempts),
-      delay(wait)
-    );
-  };
-}
-
-click.pipe(flatMap(() => load("moviess.json"))).subscribe(
+click.pipe(flatMap(() => loadWithFetch("movies.json"))).subscribe(
   renderMovies,
   e => console.log(`error: ${e}`),
   () => console.log("complete")
