@@ -1,24 +1,6 @@
-import { fromEvent, from, of, merge, throwError } from "rxjs";
-import { flatMap, catchError } from "rxjs/operators";
-import { loadWithFetch } from "./loader";
-
-let source = merge(
-  of(1),
-  from([2, 3, 4]),
-  throwError(new Error("Stop")),
-  of(5)
-).pipe(
-  catchError(e => {
-    console.log(`caught ${e}`);
-    return of(10);
-  })
-);
-
-source.subscribe(
-  value => console.log(`value ${value}`),
-  error => console.log(`error ${error}`),
-  () => console.log("complete")
-);
+import { fromEvent } from "rxjs";
+import { flatMap } from "rxjs/operators";
+import { load } from "./loader";
 
 const output = document.getElementById("output");
 const button = document.getElementById("button");
@@ -33,8 +15,15 @@ function renderMovies(movies: any) {
   });
 }
 
-click.pipe(flatMap(() => loadWithFetch("movies.json"))).subscribe(
+click.pipe(flatMap(() => load("movies.json"))).subscribe(
   renderMovies,
   e => console.log(`error: ${e}`),
   () => console.log("complete")
 );
+
+// const subscription = load("movies.json").subscribe(
+//   renderMovies,
+//   e => console.log(`error: ${e}`),
+//   () => console.log("complete")
+// );
+// subscription.unsubscribe();
